@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -27,9 +28,11 @@ type offset struct {
 	x, y int
 }
 
+// Note that N/S offsets are inverse to what you'd expect because the
+// postive y-axis moves downwards.
 var MovementOffsets = map[int]offset{
-	N: {0, 1},
-	S: {0, -1},
+	N: {0, -1},
+	S: {0, 1},
 	E: {1, 0},
 	W: {-1, 0},
 }
@@ -41,7 +44,7 @@ var OppositeDirections = map[int]int{
 	W: E,
 }
 
-// Recursively visit every unvisited cell starting from the passed (x, y) coord.
+// Recursively visit every unvisited cell starting from (x, y).
 func exploreCell(x, y int, g *Graph) {
 	dirs := []int{N, S, E, W}
 	rand.Shuffle(len(dirs), func(i, j int) {
@@ -68,11 +71,33 @@ func validCell(x, y int, g *Graph) bool {
 	return 0 <= x && x < len((*g)[0]) && 0 <= y && y < len(*g)
 }
 
+// Output a graph as ASCII to stdout.
 func drawMaze(g *Graph) {
+	mazeWidth := len((*g)[0]) * 2
+
+	// North border is always closed
+	fmt.Printf(" %s\n", strings.Repeat("_", mazeWidth-1))
 	for _, row := range *g {
+		// West border is always closed
 		fmt.Printf("|")
-		for _, cell := range row {
-			fmt.Printf("%d ", cell)
+
+		// For each cell print the East and South borders if closed,
+		// no need to print the West and North borders as those
+		// are added implicitly by the neighboring cells.
+		for i, cell := range row {
+			if cell&S != 0 {
+				fmt.Printf(" ")
+			} else {
+				fmt.Printf("_")
+			}
+
+			if cell&E != 0 && row[i+1]&S != 0 {
+				fmt.Printf("_")
+			} else if cell&E != 0 {
+				fmt.Printf(" ")
+			} else {
+				fmt.Printf("|")
+			}
 		}
 		fmt.Printf("\n")
 	}
@@ -90,8 +115,14 @@ func newGraph(h, w int) *Graph {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	h, _ := strconv.Atoi(os.Args[1])
-	w, _ := strconv.Atoi(os.Args[2])
+	var h, w int
+	if len(os.Args) < 3 {
+		h, w = 10, 10
+	} else {
+		h, _ = strconv.Atoi(os.Args[1])
+		w, _ = strconv.Atoi(os.Args[2])
+	}
+
 	graph := newGraph(h, w)
 
 	exploreCell(0, 0, graph)
