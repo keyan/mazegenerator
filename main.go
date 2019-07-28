@@ -18,10 +18,11 @@ type Graph = [][]int
 
 // Direction bit values
 const (
-	N int = 1
-	S int = 2
-	E int = 4
-	W int = 8
+	UNVISTED int = 0
+	N        int = 1
+	S        int = 2
+	E        int = 4
+	W        int = 8
 )
 
 type offset struct {
@@ -55,7 +56,7 @@ func exploreCell(x, y int, g *Graph) {
 	for _, dir := range dirs {
 		nx = x + MovementOffsets[dir].x
 		ny = y + MovementOffsets[dir].y
-		if validCell(nx, ny, g) && (*g)[ny][nx] == 0 {
+		if validCell(nx, ny, g) && (*g)[ny][nx] == UNVISTED {
 			// Open the direction of travel for the current cell
 			(*g)[y][x] |= dir
 			// Open the direction of travel relative to the next cell
@@ -76,25 +77,32 @@ func drawMaze(g *Graph) {
 	mazeWidth := len((*g)[0]) * 2
 
 	// North border is always closed
-	fmt.Printf(" %s\n", strings.Repeat("_", mazeWidth-1))
-	for _, row := range *g {
-		// West border is always closed
-		fmt.Printf("|")
+	fmt.Printf("  %s\n", strings.Repeat("_", mazeWidth))
+	for y, row := range *g {
+		// West border is always closed, except for the start
+		if y == 0 {
+			fmt.Printf("-> ")
+		} else {
+			fmt.Printf("  |")
+		}
 
-		// For each cell print the East and South borders if closed,
-		// no need to print the West and North borders as those
-		// are added implicitly by the neighboring cells.
-		for i, cell := range row {
-			if cell&S != 0 {
+		// For each cell print the East and South walls if closed.
+		// No need to print the West and North walls as those
+		// are added implicitly by the neighboring cells, with
+		// the exception of the N/W borders, as noted above.
+		for x, cell := range row {
+			if cell&S == S {
 				fmt.Printf(" ")
 			} else {
 				fmt.Printf("_")
 			}
 
-			if cell&E != 0 && row[i+1]&S != 0 {
-				fmt.Printf("_")
-			} else if cell&E != 0 {
+			if cell&E == E && cell&S == S {
 				fmt.Printf(" ")
+			} else if cell&E == E {
+				fmt.Printf("_")
+			} else if x == len((*g)[0])-1 && y == len((*g))-1 {
+				fmt.Printf(" ->")
 			} else {
 				fmt.Printf("|")
 			}
@@ -117,7 +125,7 @@ func main() {
 
 	var h, w int
 	if len(os.Args) < 3 {
-		h, w = 10, 10
+		h, w = 20, 20
 	} else {
 		h, _ = strconv.Atoi(os.Args[1])
 		w, _ = strconv.Atoi(os.Args[2])
